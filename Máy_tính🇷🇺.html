@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+<title>Máy Tính Thông Minh</title>
+
+<!-- Cho phép lưu ra Màn hình chính trên iPhone và chạy như 1 app riêng -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Máy Tính">
+<meta name="theme-color" content="#f2f1ec">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --bg:#f2f1ec;
+    --card:#ffffff;
+    --ink:#211f1c;
+    --muted:#78766e;
+    --line:#e3e1d8;
+    --amber:#b5490f;
+    --amber-dark:#8f3a0c;
+    --amber-soft:#fbe9de;
+    --teal:#0f6e64;
+    --teal-dark:#0a4a43;
+    --teal-soft:#e1f2ef;
+    --danger:#b3261e;
+    --danger-soft:#fbe6e4;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:'IBM Plex Sans',system-ui,sans-serif;
+    background:var(--bg); color:var(--ink);
+    -webkit-font-smoothing:antialiased;
+    padding-bottom:36px;
+    min-height:100vh;
+  }
+  .mono{font-family:'IBM Plex Mono',monospace;}
+  button{font-family:inherit;}
+  input,textarea{font-family:inherit;}
+  .wrap{max-width:480px;margin:0 auto;padding:0 14px;}
+
+  /* ============ TOPBAR ============ */
+  .topbar{padding:22px 14px 14px;text-align:center;}
+  .topbar h1{margin:0;font-size:21px;font-weight:700;letter-spacing:-.01em;}
+  .topbar .sub{margin:4px 0 0;font-size:12.5px;color:var(--muted);}
+
+  /* ============ HINT BANNER (thêm vào màn hình chính) ============ */
+  .hint-banner{display:flex;align-items:center;gap:10px;background:var(--teal-soft);color:var(--teal-dark);border-radius:var(--radius);padding:10px 12px;margin:0 0 14px;font-size:12.5px;line-height:1.5;}
+  .hint-banner .icon{font-size:20px;flex-shrink:0;}
+  .hint-banner .close{margin-left:auto;background:none;border:none;color:var(--teal-dark);font-size:16px;cursor:pointer;padding:2px 4px;flex-shrink:0;}
+
+  /* ============ TABBAR ============ */
+  .tabbar{display:flex;gap:6px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:4px;margin-bottom:16px;}
+  .tab-btn{flex:1;border:none;background:transparent;padding:9px 4px;border-radius:9px;font-size:12.5px;font-weight:600;color:var(--muted);cursor:pointer;transition:.15s;}
+  .tab-btn.active{background:var(--teal);color:#fff;}
+  .tab-panel{display:none;}
+  .tab-panel.active{display:block;}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:14px;box-shadow:0 1px 2px rgba(33,31,28,.04);}
+
+  /* ============ MÁY TÍNH THƯỜNG ============ */
+  .calc-screen{background:linear-gradient(160deg,#1c2b29,#0f1d1b);border-radius:var(--radius);padding:22px 18px 18px;margin-bottom:14px;color:#fff;text-align:right;position:relative;overflow:hidden;}
+  .calc-screen::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 85% -10%, rgba(15,110,100,.35), transparent 60%);}
+  .calc-expr{position:relative;font-family:'IBM Plex Mono',monospace;font-size:14px;color:#8fd6cb;min-height:18px;opacity:.85;word-break:break-all;}
+  .calc-result{position:relative;font-family:'IBM Plex Mono',monospace;font-size:40px;font-weight:600;line-height:1.25;margin-top:2px;word-break:break-all;}
+  .calc-savebar{position:relative;display:flex;justify-content:flex-end;margin-top:8px;}
+  .btn-save-calc{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.22);border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;}
+  .btn-save-calc:disabled{opacity:.35;cursor:default;}
+  .btn-save-calc:not(:disabled):active{background:rgba(255,255,255,.22);}
+
+  .keypad{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;}
+  .key{border:none;border-radius:12px;font-size:19px;font-weight:600;padding:0;height:60px;cursor:pointer;background:var(--card);color:var(--ink);border:1px solid var(--line);box-shadow:0 1px 2px rgba(33,31,28,.05);}
+  .key:active{transform:scale(.96);}
+  .key-fn{background:#ece9e0;color:var(--ink);}
+  .key-op{background:var(--teal-soft);color:var(--teal-dark);font-size:22px;}
+  .key-eq{background:var(--teal);color:#fff;font-size:22px;}
+  .key-zero{grid-column:span 2;}
+
+  /* ============ TỔNG & TRUNG BÌNH ============ */
+  .field label{font-size:12.5px;font-weight:600;color:var(--muted);display:block;margin-bottom:6px;}
+  #statsInput{width:100%;min-height:110px;border:1px solid var(--line);border-radius:10px;padding:12px;font-family:'IBM Plex Mono',monospace;font-size:14.5px;line-height:1.6;resize:vertical;background:#fbfaf6;}
+  #statsInput:focus{outline:2px solid var(--teal);outline-offset:1px;}
+  .hint-icon{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;background:var(--line);color:var(--muted);font-size:10.5px;font-style:normal;cursor:help;margin-left:4px;}
+  .invalid-note{font-size:11.5px;color:var(--danger);margin-top:6px;}
+
+  .stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px;}
+  .stat-card{background:#fbfaf6;border:1px solid var(--line);border-radius:10px;padding:12px;text-align:center;}
+  .stat-card .lbl{font-size:11px;color:var(--muted);font-weight:600;margin-bottom:4px;}
+  .stat-card .val{font-family:'IBM Plex Mono',monospace;font-size:19px;font-weight:700;}
+  .stat-card.main{background:var(--teal-soft);grid-column:span 1;}
+  .stat-card.main .val{color:var(--teal-dark);font-size:22px;}
+  .stat-card.count{background:var(--amber-soft);}
+  .stat-card.count .val{color:var(--amber-dark);}
+
+  .btn-save-stats{width:100%;margin-top:14px;background:var(--teal);color:#fff;border:none;border-radius:10px;padding:12px;font-size:14px;font-weight:600;cursor:pointer;}
+  .btn-save-stats:disabled{background:#cfcdc4;cursor:default;}
+
+  /* ============ LỊCH SỬ ĐÃ LƯU ============ */
+  #historySearch{width:100%;border:1px solid var(--line);border-radius:10px;padding:9px 12px;font-size:13.5px;margin-bottom:12px;background:#fbfaf6;}
+  .history-item{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:10px;cursor:pointer;}
+  .history-item:active{background:#f7f6f1;}
+  .history-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;}
+  .history-name{font-weight:700;font-size:14.5px;}
+  .history-badge{font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:6px;white-space:nowrap;}
+  .history-badge.calc{background:var(--teal-soft);color:var(--teal-dark);}
+  .history-badge.stats{background:var(--amber-soft);color:var(--amber-dark);}
+  .history-detail{font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--ink);margin-top:6px;line-height:1.5;word-break:break-word;}
+  .history-meta{display:flex;justify-content:space-between;align-items:center;margin-top:8px;}
+  .history-time{font-size:11px;color:var(--muted);}
+  .history-actions{display:flex;gap:6px;}
+  .history-actions button{border:none;background:#eee;border-radius:6px;width:26px;height:26px;font-size:12px;cursor:pointer;}
+  .history-actions .del{background:var(--danger-soft);color:var(--danger);}
+  .history-actions .edit{background:var(--teal-soft);color:var(--teal-dark);}
+  .empty-history{text-align:center;color:var(--muted);font-size:13px;padding:30px 10px;}
+  .empty-history .big{font-size:34px;display:block;margin-bottom:8px;}
+
+  /* ============ MODALS ============ */
+  .modal-bg{display:none;position:fixed;inset:0;background:rgba(20,18,15,.5);z-index:100;align-items:center;justify-content:center;padding:16px;}
+  .modal-bg.show{display:flex;}
+  .modal{background:var(--card);border-radius:16px;padding:20px;width:100%;max-width:360px;}
+  .modal h3{margin:0 0 6px;font-size:16px;}
+  .modal .sub{font-size:12.5px;color:var(--muted);margin:0 0 10px;}
+  .modal input{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;margin-bottom:4px;}
+  .modal-actions{display:flex;gap:8px;margin-top:14px;justify-content:flex-end;}
+  .btn{border:none;border-radius:9px;padding:9px 16px;font-size:13.5px;font-weight:600;cursor:pointer;}
+  .btn-ghost{background:#ece9e0;color:var(--ink);}
+  .btn-primary{background:var(--teal);color:#fff;}
+  .btn-danger{background:var(--danger);color:#fff;}
+
+  .toast{position:fixed;left:50%;bottom:28px;transform:translate(-50%,20px);background:var(--ink);color:#fff;padding:10px 18px;border-radius:10px;font-size:13px;opacity:0;pointer-events:none;transition:.25s;z-index:200;max-width:88vw;text-align:center;}
+  .toast.show{opacity:1;transform:translate(-50%,0);}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="topbar">
+    <h1>🧮 Máy Tính Thông Minh</h1>
+    <p class="sub">Tính nhanh · nhớ tên việc đã tính · tra lại bất cứ lúc nào</p>
+  </div>
+
+  <div class="hint-banner" id="hintBanner">
+    <span class="icon">📲</span>
+    <span>Mẹo: mở bằng Safari, bấm nút <b>Chia sẻ</b> → <b>"Thêm vào MH chính"</b> để dùng như 1 app riêng trên iPhone.</span>
+    <button class="close" id="btnCloseHint" type="button">✕</button>
+  </div>
+
+  <div class="tabbar" id="tabbar">
+    <button class="tab-btn active" data-tab="calc" type="button">🧮 Máy tính</button>
+    <button class="tab-btn" data-tab="stats" type="button">📊 Tổng & TB</button>
+    <button class="tab-btn" data-tab="history" type="button">🕘 Đã lưu</button>
+  </div>
+
+  <!-- ============ TAB 1: MÁY TÍNH THƯỜNG ============ -->
+  <section class="tab-panel active" id="tab-calc">
+    <div class="calc-screen">
+      <div class="calc-expr" id="calcExpr">&nbsp;</div>
+      <div class="calc-result mono" id="calcResult">0</div>
+      <div class="calc-savebar">
+        <button class="btn-save-calc" id="btnSaveCalc" type="button" disabled>💾 Lưu phép tính</button>
+      </div>
+    </div>
+    <div class="keypad">
+      <button class="key key-fn" data-act="clear" type="button">C</button>
+      <button class="key key-fn" data-act="sign" type="button">±</button>
+      <button class="key key-fn" data-act="percent" type="button">%</button>
+      <button class="key key-op" data-op="÷" type="button">÷</button>
+
+      <button class="key" data-num="7" type="button">7</button>
+      <button class="key" data-num="8" type="button">8</button>
+      <button class="key" data-num="9" type="button">9</button>
+      <button class="key key-op" data-op="×" type="button">×</button>
+
+      <button class="key" data-num="4" type="button">4</button>
+      <button class="key" data-num="5" type="button">5</button>
+      <button class="key" data-num="6" type="button">6</button>
+      <button class="key key-op" data-op="−" type="button">−</button>
+
+      <button class="key" data-num="1" type="button">1</button>
+      <button class="key" data-num="2" type="button">2</button>
+      <button class="key" data-num="3" type="button">3</button>
+      <button class="key key-op" data-op="+" type="button">+</button>
+
+      <button class="key key-zero" data-num="0" type="button">0</button>
+      <button class="key" data-act="dot" type="button">,</button>
+      <button class="key key-eq" data-act="equals" type="button">=</button>
+    </div>
+    <div style="text-align:center;margin-top:10px;">
+      <button class="btn btn-ghost" id="btnBackspace" type="button" style="padding:8px 18px;">⌫ Xóa 1 ký tự</button>
+    </div>
+  </section>
+
+  <!-- ============ TAB 2: TỔNG & TRUNG BÌNH ============ -->
+  <section class="tab-panel" id="tab-stats">
+    <div class="card">
+      <div class="field">
+        <label>Nhập các số cần tính
+          <span class="hint-icon" id="statsHint" tabindex="0" title="Cách nhau bằng dấu phẩy, khoảng trắng hoặc xuống dòng. Số thập phân dùng dấu chấm, VD: 7.5">ⓘ</span>
+        </label>
+        <textarea id="statsInput" placeholder="VD: 78, 56, 48, 90"></textarea>
+      </div>
+      <div class="invalid-note" id="invalidNote" style="display:none;"></div>
+
+      <div class="stats-grid">
+        <div class="stat-card main"><div class="lbl">TỔNG</div><div class="val mono" id="statSum">0</div></div>
+        <div class="stat-card main"><div class="lbl">TRUNG BÌNH</div><div class="val mono" id="statAvg">0</div></div>
+        <div class="stat-card count"><div class="lbl">SỐ LƯỢNG</div><div class="val mono" id="statCount">0</div></div>
+        <div class="stat-card"><div class="lbl">TRUNG VỊ</div><div class="val mono" id="statMedian">0</div></div>
+        <div class="stat-card"><div class="lbl">LỚN NHẤT</div><div class="val mono" id="statMax">0</div></div>
+        <div class="stat-card"><div class="lbl">NHỎ NHẤT</div><div class="val mono" id="statMin">0</div></div>
+      </div>
+
+      <button class="btn-save-stats" id="btnSaveStats" type="button" disabled>💾 Lưu phép tính này</button>
+    </div>
+  </section>
+
+  <!-- ============ TAB 3: LỊCH SỬ ĐÃ LƯU ============ -->
+  <section class="tab-panel" id="tab-history">
+    <input type="text" id="historySearch" placeholder="🔎 Tìm theo tên việc đã lưu...">
+    <div id="historyList"></div>
+  </section>
+</div>
+
+<!-- ============ MODAL: NHẬP TÊN ============ -->
+<div class="modal-bg" id="promptModal">
+  <div class="modal">
+    <h3 id="promptModalTitle">Đặt tên cho phép tính này</h3>
+    <p class="sub" id="promptModalMsg"></p>
+    <input type="text" id="promptModalInput" placeholder="VD: Điểm thi lớp 10A">
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="btnPromptCancel" type="button">Hủy</button>
+      <button class="btn btn-primary" id="btnPromptOk" type="button">Lưu</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MODAL: XÁC NHẬN ============ -->
+<div class="modal-bg" id="confirmModal">
+  <div class="modal">
+    <h3 id="confirmModalTitle">Xác nhận</h3>
+    <p class="sub" id="confirmModalMsg"></p>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="btnConfirmCancel" type="button">Hủy</button>
+      <button class="btn btn-danger" id="btnConfirmOk" type="button">Xóa</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ================= TIỆN ÍCH CHUNG =================
+function showToast(msg, duration=2200){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(()=>t.classList.remove('show'), duration);
+}
+
+function customConfirm(message, opts={}){
+  return new Promise((resolve)=>{
+    const modal = document.getElementById('confirmModal');
+    document.getElementById('confirmModalTitle').textContent = opts.title || 'Xác nhận';
+    document.getElementById('confirmModalMsg').textContent = message;
+    modal.classList.add('show');
+    const okBtn = document.getElementById('btnConfirmOk');
+    const cancelBtn = document.getElementById('btnConfirmCancel');
+    function cleanup(result){
+      modal.classList.remove('show');
+      okBtn.removeEventListener('click', onOk);
+      cancelBtn.removeEventListener('click', onCancel);
+      resolve(result);
+    }
+    function onOk(){ cleanup(true); }
+    function onCancel(){ cleanup(false); }
+    okBtn.addEventListener('click', onOk);
+    cancelBtn.addEventListener('click', onCancel);
+  });
+}
+
+function customPrompt(message, defaultValue=''){
+  return new Promise((resolve)=>{
+    const modal = document.getElementById('promptModal');
+    const input = document.getElementById('promptModalInput');
+    const okBtn = document.getElementById('btnPromptOk');
+    const cancelBtn = document.getElementById('btnPromptCancel');
+    document.getElementById('promptModalMsg').textContent = message;
+    input.value = defaultValue;
+    modal.classList.add('show');
+    setTimeout(()=>input.focus(), 60);
+    function cleanup(result){
+      modal.classList.remove('show');
+      okBtn.removeEventListener('click', onOk);
+      cancelBtn.removeEventListener('click', onCancel);
+      input.removeEventListener('keydown', onKey);
+      resolve(result);
+    }
+    function onOk(){ cleanup(input.value.trim() || null); }
+    function onCancel(){ cleanup(null); }
+    function onKey(e){ if(e.key==='Enter'){ e.preventDefault(); onOk(); } }
+    okBtn.addEventListener('click', onOk);
+    cancelBtn.addEventListener('click', onCancel);
+    input.addEventListener('keydown', onKey);
+  });
+}
+
+function fmtNum(n){
+  if(!isFinite(n)) return '0';
+  const rounded = Math.round(n*10000)/10000;
+  return rounded.toLocaleString('vi-VN', {maximumFractionDigits:4});
+}
+
+// ================= LƯU TRỮ (LOCALSTORAGE) =================
+const LS_KEY = 'smart-calc-history';
+let history = [];
+function loadHistory(){
+  try{ const raw = localStorage.getItem(LS_KEY); if(raw) history = JSON.parse(raw); }catch(e){ history = []; }
+}
+function saveHistory(){ localStorage.setItem(LS_KEY, JSON.stringify(history)); }
+
+// ================= TABS =================
+function switchTab(tab){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active', b.dataset.tab===tab));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.toggle('active', p.id === 'tab-'+tab));
+  if(tab==='history') renderHistory();
+}
+document.getElementById('tabbar').addEventListener('click', (e)=>{
+  const btn = e.target.closest('.tab-btn');
+  if(btn) switchTab(btn.dataset.tab);
+});
+
+// ================= BANNER "THÊM VÀO MÀN HÌNH CHÍNH" =================
+(function initHintBanner(){
+  const isStandalone = window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
+  const dismissed = localStorage.getItem('smart-calc-hint-dismissed') === '1';
+  const banner = document.getElementById('hintBanner');
+  if(isStandalone || dismissed){ banner.style.display = 'none'; }
+  document.getElementById('btnCloseHint').addEventListener('click', ()=>{
+    banner.style.display = 'none';
+    localStorage.setItem('smart-calc-hint-dismissed', '1');
+  });
+})();
+
+// ================= TỰ TẠO ICON ĐẸP CHO MÀN HÌNH CHÍNH =================
+(function generateIcon(){
+  try{
+    const canvas = document.createElement('canvas');
+    canvas.width = 180; canvas.height = 180;
+    const ctx = canvas.getContext('2d');
+    const grad = ctx.createLinearGradient(0,0,180,180);
+    grad.addColorStop(0, '#14847a');
+    grad.addColorStop(1, '#0a4a43');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0,0,180,180);
+    ctx.fillStyle = 'rgba(255,255,255,.14)';
+    ctx.beginPath(); ctx.arc(150,30,60,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.font = '700 92px "IBM Plex Mono", monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('Σ', 92, 102);
+    const dataUrl = canvas.toDataURL('image/png');
+    let link = document.querySelector("link[rel~='apple-touch-icon']");
+    if(!link){ link = document.createElement('link'); link.rel='apple-touch-icon'; document.head.appendChild(link); }
+    link.href = dataUrl;
+    let fav = document.querySelector("link[rel~='icon']");
+    if(!fav){ fav = document.createElement('link'); fav.rel='icon'; document.head.appendChild(fav); }
+    fav.href = dataUrl;
+  }catch(e){ /* bỏ qua nếu trình duyệt không hỗ trợ canvas */ }
+})();
+
+// ================= MÁY TÍNH THƯỜNG =================
+const calcExprEl = document.getElementById('calcExpr');
+const calcResultEl = document.getElementById('calcResult');
+const btnSaveCalc = document.getElementById('btnSaveCalc');
+
+let calcState = {
+  firstOperand: null,
+  operator: null,
+  currentValue: '0',
+  waitingForSecond: false,
+  justEvaluated: false,
+  fullExpression: ''  // chuỗi hiển thị đầy đủ, VD "78 + 56 ="
+};
+
+function calcDisplayValue(){
+  return calcState.currentValue.replace('.', ',');
+}
+function updateCalcScreen(){
+  calcResultEl.textContent = calcDisplayValue();
+  calcExprEl.textContent = calcState.fullExpression || '\u00A0';
+  btnSaveCalc.disabled = !calcState.justEvaluated;
+}
+function inputDigit(d){
+  if(calcState.justEvaluated){
+    calcState.currentValue = '0';
+    calcState.fullExpression = '';
+    calcState.justEvaluated = false;
+  }
+  if(calcState.waitingForSecond){
+    calcState.currentValue = d;
+    calcState.waitingForSecond = false;
+  } else {
+    calcState.currentValue = calcState.currentValue === '0' ? d : calcState.currentValue + d;
+  }
+  updateCalcScreen();
+}
+function inputDot(){
+  if(calcState.justEvaluated){
+    calcState.currentValue = '0';
+    calcState.fullExpression = '';
+    calcState.justEvaluated = false;
+  }
+  if(calcState.waitingForSecond){ calcState.currentValue = '0.'; calcState.waitingForSecond = false; updateCalcScreen(); return; }
+  if(!calcState.currentValue.includes('.')) calcState.currentValue += '.';
+  updateCalcScreen();
+}
+function compute(a, op, b){
+  switch(op){
+    case '+': return a + b;
+    case '−': return a - b;
+    case '×': return a * b;
+    case '÷': return b === 0 ? NaN : a / b;
+    default: return b;
+  }
+}
+function handleOperator(op){
+  const inputValue = parseFloat(calcState.currentValue);
+  if(calcState.operator && calcState.waitingForSecond){
+    calcState.operator = op;
+    calcState.fullExpression = fmtNum(calcState.firstOperand) + ' ' + op;
+    updateCalcScreen();
+    return;
+  }
+  if(calcState.firstOperand === null){
+    calcState.firstOperand = inputValue;
+  } else if(calcState.operator){
+    const result = compute(calcState.firstOperand, calcState.operator, inputValue);
+    calcState.firstOperand = result;
+    calcState.currentValue = String(isNaN(result) ? 0 : result);
+  }
+  calcState.justEvaluated = false;
+  calcState.waitingForSecond = true;
+  calcState.operator = op;
+  calcState.fullExpression = fmtNum(calcState.firstOperand) + ' ' + op;
+  updateCalcScreen();
+}
+function handleEquals(){
+  if(calcState.operator === null) return;
+  const inputValue = parseFloat(calcState.currentValue);
+  const exprBefore = fmtNum(calcState.firstOperand) + ' ' + calcState.operator + ' ' + fmtNum(inputValue);
+  const result = compute(calcState.firstOperand, calcState.operator, inputValue);
+  calcState.currentValue = isNaN(result) ? 'Lỗi' : String(result);
+  calcState.fullExpression = exprBefore + ' =';
+  calcState.firstOperand = null;
+  calcState.operator = null;
+  calcState.waitingForSecond = false;
+  calcState.justEvaluated = true;
+  updateCalcScreen();
+}
+function handleClear(){
+  calcState = {firstOperand:null, operator:null, currentValue:'0', waitingForSecond:false, justEvaluated:false, fullExpression:''};
+  updateCalcScreen();
+}
+function handleSign(){
+  if(calcState.currentValue === '0') return;
+  calcState.currentValue = calcState.currentValue.startsWith('-') ? calcState.currentValue.slice(1) : '-' + calcState.currentValue;
+  updateCalcScreen();
+}
+function handlePercent(){
+  const v = parseFloat(calcState.currentValue) || 0;
+  if(calcState.operator && calcState.firstOperand !== null){
+    calcState.currentValue = String(calcState.firstOperand * (v/100));
+  } else {
+    calcState.currentValue = String(v/100);
+  }
+  updateCalcScreen();
+}
+function handleBackspace(){
+  if(calcState.justEvaluated) return;
+  if(calcState.currentValue.length <= 1 || (calcState.currentValue.length===2 && calcState.currentValue.startsWith('-'))){
+    calcState.currentValue = '0';
+  } else {
+    calcState.currentValue = calcState.currentValue.slice(0,-1);
+  }
+  updateCalcScreen();
+}
+
+document.querySelectorAll('[data-num]').forEach(btn=>{
+  btn.addEventListener('click', ()=> inputDigit(btn.dataset.num));
+});
+document.querySelectorAll('[data-op]').forEach(btn=>{
+  btn.addEventListener('click', ()=> handleOperator(btn.dataset.op));
+});
+document.querySelector('[data-act="clear"]').addEventListener('click', handleClear);
+document.querySelector('[data-act="sign"]').addEventListener('click', handleSign);
+document.querySelector('[data-act="percent"]').addEventListener('click', handlePercent);
+document.querySelector('[data-act="dot"]').addEventListener('click', inputDot);
+document.querySelector('[data-act="equals"]').addEventListener('click', handleEquals);
+document.getElementById('btnBackspace').addEventListener('click', handleBackspace);
+
+btnSaveCalc.addEventListener('click', async ()=>{
+  const name = await customPrompt('Đặt tên cho phép tính này (VD: Tiền hàng hôm nay):');
+  if(!name) return;
+  history.unshift({
+    id: Date.now(),
+    type: 'calc',
+    name,
+    expression: calcState.fullExpression,
+    result: calcState.currentValue,
+    ts: new Date().toISOString()
+  });
+  saveHistory();
+  showToast(`Đã lưu "${name}"`);
+});
+
+// ================= TỔNG & TRUNG BÌNH =================
+const statsInput = document.getElementById('statsInput');
+const invalidNote = document.getElementById('invalidNote');
+const btnSaveStats = document.getElementById('btnSaveStats');
+let lastStats = null;
+
+function parseNumberList(text){
+  const tokens = text.split(/[,;\n\t]+|\s+/).map(t=>t.trim()).filter(Boolean);
+  const nums = [];
+  const invalid = [];
+  tokens.forEach(t=>{
+    if(/^-?\d+(\.\d+)?$/.test(t)){ nums.push(parseFloat(t)); }
+    else invalid.push(t);
+  });
+  return {nums, invalid};
+}
+function median(arr){
+  if(!arr.length) return 0;
+  const s = [...arr].sort((a,b)=>a-b);
+  const mid = Math.floor(s.length/2);
+  return s.length % 2 !== 0 ? s[mid] : (s[mid-1] + s[mid]) / 2;
+}
+function computeStats(){
+  const {nums, invalid} = parseNumberList(statsInput.value);
+  if(invalid.length){
+    invalidNote.style.display = 'block';
+    invalidNote.textContent = `⚠️ Bỏ qua (không phải số): ${invalid.slice(0,8).join(', ')}${invalid.length>8?'...':''}`;
+  } else {
+    invalidNote.style.display = 'none';
+  }
+  const count = nums.length;
+  const sum = nums.reduce((a,b)=>a+b, 0);
+  const avg = count ? sum/count : 0;
+  const max = count ? Math.max(...nums) : 0;
+  const min = count ? Math.min(...nums) : 0;
+  const med = median(nums);
+
+  document.getElementById('statSum').textContent = fmtNum(sum);
+  document.getElementById('statAvg').textContent = fmtNum(avg);
+  document.getElementById('statCount').textContent = count;
+  document.getElementById('statMedian').textContent = fmtNum(med);
+  document.getElementById('statMax').textContent = fmtNum(max);
+  document.getElementById('statMin').textContent = fmtNum(min);
+
+  btnSaveStats.disabled = count === 0;
+  lastStats = {nums, count, sum, avg, max, min, med, raw: statsInput.value.trim()};
+}
+statsInput.addEventListener('input', computeStats);
+document.getElementById('statsHint').addEventListener('click', (e)=> showToast(e.target.title, 4000));
+
+btnSaveStats.addEventListener('click', async ()=>{
+  if(!lastStats || lastStats.count===0) return;
+  const name = await customPrompt('Đặt tên cho phép tính này (VD: Điểm thi lớp 10A):');
+  if(!name) return;
+  history.unshift({
+    id: Date.now(),
+    type: 'stats',
+    name,
+    raw: lastStats.raw,
+    count: lastStats.count,
+    sum: lastStats.sum,
+    avg: lastStats.avg,
+    max: lastStats.max,
+    min: lastStats.min,
+    med: lastStats.med,
+    ts: new Date().toISOString()
+  });
+  saveHistory();
+  showToast(`Đã lưu "${name}"`);
+});
+
+// ================= LỊCH SỬ ĐÃ LƯU =================
+const historyList = document.getElementById('historyList');
+const historySearch = document.getElementById('historySearch');
+
+function fmtTime(iso){
+  const d = new Date(iso);
+  return d.toLocaleString('vi-VN', {day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'});
+}
+
+function renderHistory(){
+  const q = historySearch.value.trim().toLowerCase();
+  const filtered = q ? history.filter(h=>h.name.toLowerCase().includes(q)) : history;
+
+  if(filtered.length === 0){
+    historyList.innerHTML = `<div class="empty-history"><span class="big">🗂️</span>${history.length===0 ? 'Chưa có phép tính nào được lưu — làm 1 phép tính rồi bấm "Lưu" nhé!' : 'Không tìm thấy tên phù hợp.'}</div>`;
+    return;
+  }
+
+  historyList.innerHTML = filtered.map(h=>{
+    if(h.type === 'calc'){
+      return `<div class="history-item" data-id="${h.id}">
+        <div class="history-top">
+          <span class="history-name">${escapeHtml(h.name)}</span>
+          <span class="history-badge calc">Máy tính</span>
+        </div>
+        <div class="history-detail">${escapeHtml(h.expression)} <b>${h.result}</b></div>
+        <div class="history-meta">
+          <span class="history-time">${fmtTime(h.ts)}</span>
+          <div class="history-actions">
+            <button class="edit" data-edit="${h.id}" title="Đổi tên">✏️</button>
+            <button class="del" data-del="${h.id}" title="Xóa">✕</button>
+          </div>
+        </div>
+      </div>`;
+    }
+    return `<div class="history-item" data-id="${h.id}">
+      <div class="history-top">
+        <span class="history-name">${escapeHtml(h.name)}</span>
+        <span class="history-badge stats">Tổng & TB</span>
+      </div>
+      <div class="history-detail">${h.count} số → Tổng <b>${fmtNum(h.sum)}</b> · TB <b>${fmtNum(h.avg)}</b></div>
+      <div class="history-meta">
+        <span class="history-time">${fmtTime(h.ts)}</span>
+        <div class="history-actions">
+          <button class="edit" data-edit="${h.id}" title="Đổi tên">✏️</button>
+          <button class="del" data-del="${h.id}" title="Xóa">✕</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  historyList.querySelectorAll('.history-item').forEach(item=>{
+    item.addEventListener('click', (e)=>{
+      if(e.target.closest('[data-del]') || e.target.closest('[data-edit]')) return;
+      const id = Number(item.dataset.id);
+      loadHistoryItem(id);
+    });
+  });
+  historyList.querySelectorAll('[data-del]').forEach(btn=>{
+    btn.addEventListener('click', async (e)=>{
+      e.stopPropagation();
+      const id = Number(btn.dataset.del);
+      const item = history.find(h=>h.id===id);
+      if(!item) return;
+      if(await customConfirm(`Xóa "${item.name}" khỏi lịch sử?`)){
+        history = history.filter(h=>h.id!==id);
+        saveHistory();
+        renderHistory();
+        showToast('Đã xóa');
+      }
+    });
+  });
+  historyList.querySelectorAll('[data-edit]').forEach(btn=>{
+    btn.addEventListener('click', async (e)=>{
+      e.stopPropagation();
+      const id = Number(btn.dataset.edit);
+      const item = history.find(h=>h.id===id);
+      if(!item) return;
+      const newName = await customPrompt('Đổi tên phép tính:', item.name);
+      if(!newName) return;
+      item.name = newName;
+      saveHistory();
+      renderHistory();
+      showToast('Đã đổi tên');
+    });
+  });
+}
+function loadHistoryItem(id){
+  const item = history.find(h=>h.id===id);
+  if(!item) return;
+  if(item.type === 'calc'){
+    switchTab('calc');
+    handleClear();
+    calcState.currentValue = String(item.result);
+    calcState.fullExpression = item.expression;
+    calcState.justEvaluated = true;
+    updateCalcScreen();
+    showToast(`Đã mở lại "${item.name}"`);
+  } else {
+    switchTab('stats');
+    statsInput.value = item.raw;
+    computeStats();
+    showToast(`Đã mở lại "${item.name}"`);
+  }
+}
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+historySearch.addEventListener('input', renderHistory);
+
+// ================= KHỞI ĐỘNG =================
+loadHistory();
+updateCalcScreen();
+computeStats();
+</script>
+</body>
+</html>
