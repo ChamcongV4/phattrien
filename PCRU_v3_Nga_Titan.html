@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Uchet Rabochego Vremeni</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+        .grid-matrix { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; }
+
+        .collapsed > *:not(.collapse-btn) { display:none !important; }
+        .collapse-btn { z-index:2; position:relative; }
+        #theme-bar { scrollbar-width: thin; }
+        body.theme-light { background:#f4f4f5; color:#18181b; }
+        body.theme-light .bg-zinc-900 { background:#fff !important; color:#18181b !important; }
+        body.theme-light .bg-zinc-800 { background:#e4e4e7 !important; color:#18181b !important; }
+        body.theme-light .border-zinc-700 { border-color:#a1a1aa !important; }
+        body.theme-light input, body.theme-light select { color:#18181b !important; background:#fff !important; }
+        body.theme-silver { background:#d4d4d8; color:#18181b; }
+        body.theme-silver .bg-zinc-900 { background:#f4f4f5 !important; color:#18181b !important; }
+        body.theme-silver .bg-zinc-800 { background:#e4e4e7 !important; color:#18181b !important; }
+        body.theme-ice { background:#e0f2fe; color:#082f49; }
+        body.theme-ice .bg-zinc-900 { background:#f0f9ff !important; color:#082f49 !important; }
+        body.theme-ice .bg-zinc-800 { background:#bae6fd !important; color:#082f49 !important; }
+        body.theme-sand { background:#f5f5dc; color:#422006; }
+        body.theme-sand .bg-zinc-900 { background:#fffbeb !important; color:#422006 !important; }
+        body.theme-sand .bg-zinc-800 { background:#fef3c7 !important; color:#422006 !important; }
+        body.theme-titan { background:linear-gradient(135deg,#111827,#4b5563,#111827); }
+        body.theme-titan .bg-zinc-800 { background:rgba(55,65,81,.88) !important; }
+        body.theme-russia { background:linear-gradient(#fff 0 33%,#2563eb 33% 66%,#dc2626 66%); color:#111; }
+        body.theme-usa { background:linear-gradient(#b91c1c 0 12%,#fff 12% 24%,#b91c1c 24% 36%,#fff 36% 48%,#b91c1c 48% 60%,#fff 60% 72%,#b91c1c 72% 84%,#fff 84%); color:#111; }
+        body.theme-uk { background:#102a43; color:#fff; }
+        body.theme-france { background:linear-gradient(90deg,#1d4ed8 0 33%,#fff 33% 66%,#ef4444 66%); color:#111; }
+        body.theme-japan { background:#fff; color:#111; }
+        body.theme-russia .bg-zinc-800, body.theme-usa .bg-zinc-800, body.theme-uk .bg-zinc-800,
+        body.theme-france .bg-zinc-800, body.theme-japan .bg-zinc-800 { background:rgba(20,20,25,.90) !important; color:#fff !important; }
+
+        .wage-card { display:flex; flex-direction:column; gap:2px; padding:5px 3px; border:1px solid #3f3f46; border-radius:5px; text-align:center; background:#18181b; }
+        .wage-card span { font-size:9px; font-weight:900; }
+        .wage-card input { width:100%; min-width:0; padding:4px 1px; border:1px solid #3f3f46; background:#09090b; color:#fff; font-size:10px; text-align:center; border-radius:3px; }
+        .wage-card.ca1 { border-top:2px solid #dc2626; }
+        .wage-card.ca1 span { color:#fca5a5; }
+        .wage-card.ca2 { border-top:2px solid #2563eb; }
+        .wage-card.ca2 span { color:#93c5fd; }
+        .wage-card.ca3 { border-top:2px solid #7c3aed; }
+        .wage-card.ca3 span { color:#c4b5fd; }
+        .wage-card.hc { border-top:2px solid #16a34a; }
+        .wage-card.hc span { color:#86efac; }
+        .wage-card.half { border-top:2px solid #f59e0b; }
+        .wage-card.half span { color:#fcd34d; }
+
+        /* Russian-inspired shift cells: white/blue/red accents */
+        .shift-ca1 { background:linear-gradient(135deg,rgba(220,38,38,.24),rgba(255,255,255,.07)); border-color:#ef4444 !important; color:#fecaca !important; }
+        .shift-ca2 { background:linear-gradient(135deg,rgba(37,99,235,.28),rgba(255,255,255,.07)); border-color:#60a5fa !important; color:#bfdbfe !important; }
+        .shift-ca3 { background:linear-gradient(135deg,rgba(124,58,237,.28),rgba(37,99,235,.12)); border-color:#a78bfa !important; color:#ddd6fe !important; }
+        .shift-hc { background:linear-gradient(135deg,rgba(255,255,255,.18),rgba(37,99,235,.16)); border-color:#d4d4d8 !important; color:#f4f4f5 !important; }
+        .shift-half { background:linear-gradient(135deg,rgba(245,158,11,.25),rgba(220,38,38,.10)); border-color:#fbbf24 !important; color:#fde68a !important; }
+
+        #theme-panel .theme-btn { border:1px solid #3f3f46; }
+    </style>
+</head>
+<body class="bg-zinc-900 text-zinc-100 min-h-screen p-3 pb-24">
+
+    <div class="max-w-md mx-auto relative mb-2">
+        <div class="flex justify-end">
+            <button type="button" id="theme-toggle"
+                class="px-3 py-2 bg-zinc-800 border border-zinc-600 text-zinc-100 text-xs font-bold rounded">
+                🎨 THEME
+            </button>
+        </div>
+        <div id="theme-panel" class="hidden absolute right-0 top-10 z-40 w-72 bg-zinc-900 border border-zinc-600 p-2 rounded shadow-2xl">
+            <div class="text-[10px] text-zinc-400 font-bold mb-2">CHỌN GIAO DIỆN</div>
+            <div class="grid grid-cols-4 gap-1">
+                <button class="theme-btn px-2 py-2 text-[10px] bg-zinc-700 rounded" data-theme="dark">Tối</button>
+                <button class="theme-btn px-2 py-2 text-[10px] bg-zinc-700 rounded" data-theme="light">Sáng</button>
+                <button class="theme-btn px-2 py-2 text-[10px] bg-zinc-700 rounded" data-theme="slate">Slate</button>
+                <button class="theme-btn px-2 py-2 text-[10px] bg-zinc-700 rounded" data-theme="silver">Silver</button>
+                <button class="theme-btn px-2 py-2 text-[10px] bg-zinc-700 rounded" data-theme="ice">Ice</button>
+                <button class="theme-btn px-2 py-2 text-[10px] bg-zinc-700 rounded" data-theme="sand">Sand</button>
+                <button class="theme-btn px-2 py-2 text-[10px] bg-zinc-700 rounded" data-theme="titan">Titan</button>
+                <button class="theme-btn px-2 py-2 text-[10px] bg-zinc-700 rounded" data-theme="russia">🇷🇺 Nga</button>
+                <button class="theme-btn px-2 py-2 text-[10px] bg-zinc-700 rounded" data-theme="usa">🇺🇸 Mỹ</button>
+                <button class="theme-btn px-2 py-2 text-[10px] bg-zinc-700 rounded" data-theme="uk">🇬🇧 Anh</button>
+                <button class="theme-btn px-2 py-2 text-[10px] bg-zinc-700 rounded" data-theme="france">🇫🇷 Pháp</button>
+                <button class="theme-btn px-2 py-2 text-[10px] bg-zinc-700 rounded" data-theme="japan">🇯🇵 Nhật</button>
+            </div>
+        </div>
+    </div>
+    <div class="max-w-md mx-auto space-y-3">
+        
+        <!-- Header & Tabs -->
+        <div class="bg-zinc-800 p-2 border border-zinc-700 flex justify-between items-center">
+            <span class="text-xs font-bold text-zinc-400 tracking-wider">[OBYEKTOV / TAB]</span>
+            <div class="flex gap-1">
+                <button type="button" id="tab-btn-1" class="w-8 h-8 font-bold text-xs bg-amber-500 text-zinc-950">1</button>
+                <button type="button" id="tab-btn-2" class="w-8 h-8 font-bold text-xs bg-zinc-700 text-zinc-300">2</button>
+                <button type="button" id="tab-btn-3" class="w-8 h-8 font-bold text-xs bg-zinc-700 text-zinc-300">3</button>
+                <button type="button" id="tab-btn-4" class="w-8 h-8 font-bold text-xs bg-zinc-700 text-zinc-300">4</button>
+                <button type="button" id="tab-btn-5" class="w-8 h-8 font-bold text-xs bg-zinc-700 text-zinc-300">5</button>
+            </div>
+        </div>
+
+        <!-- System Controls -->
+        <div class="bg-zinc-800 p-3 border border-zinc-700 space-y-2 text-xs collapsible">
+            <button type="button" class="collapse-btn float-right text-[10px] text-zinc-400">Ẩn</button>
+            <input type="text" id="filter-name" placeholder="F.I.O (Họ tên nhân sự)..." class="w-full px-2.5 py-1.5 bg-zinc-900 border border-zinc-700 text-zinc-100 font-bold focus:outline-none focus:border-amber-500">
+            
+            <div class="grid grid-cols-2 gap-2">
+                <div class="border border-zinc-700 p-2 bg-zinc-900 space-y-1">
+                    <span class="text-zinc-400 block">📅 ПЕРИОД (Tháng)</span>
+                    <input type="month" id="filter-month" class="w-full px-2 py-1 bg-zinc-800 border border-zinc-700 text-amber-400 font-bold">
+                </div>
+                <div class="border border-zinc-700 p-2 bg-zinc-900 space-y-1">
+                    <span class="text-zinc-400 block">💵 STAVKA (Đơn giá/Ca)</span>
+                    <input type="number" id="input-wage-rate" value="300000" class="w-full px-2 py-1 bg-zinc-800 border border-zinc-700 text-emerald-400 font-bold">
+                </div>
+            </div>
+
+            <div class="border border-zinc-700 p-2 bg-zinc-900">
+                <div class="text-zinc-400 mb-1">💰 GIÁ CÔNG THEO CA</div>
+                <div class="grid grid-cols-3 gap-1">
+                    <label class="text-[10px] text-amber-300">Ca 1<input type="number" id="wage-ca1" value="300000" class="w-full px-1.5 py-1 bg-zinc-800 border border-zinc-700 text-zinc-100"></label>
+                    <label class="text-[10px] text-blue-300">Ca 2<input type="number" id="wage-ca2" value="300000" class="w-full px-1.5 py-1 bg-zinc-800 border border-zinc-700 text-zinc-100"></label>
+                    <label class="text-[10px] text-purple-300">Ca 3<input type="number" id="wage-ca3" value="300000" class="w-full px-1.5 py-1 bg-zinc-800 border border-zinc-700 text-zinc-100"></label>
+                    <label class="text-[10px] text-emerald-300">HC<input type="number" id="wage-hc" value="300000" class="w-full px-1.5 py-1 bg-zinc-800 border border-zinc-700 text-zinc-100"></label>
+                    <label class="text-[10px] text-zinc-300">1/2 Ca<input type="number" id="wage-half" value="150000" class="w-full px-1.5 py-1 bg-zinc-800 border border-zinc-700 text-zinc-100"></label>
+                </div>
+            </div>
+
+            <div class="flex gap-2 pt-1 border-t border-zinc-700">
+                <button type="button" id="btn-export" class="flex-1 py-1 bg-zinc-700 hover:bg-zinc-600 text-zinc-200 font-bold">💾 EXPORT.JSON</button>
+                <label class="flex-1 py-1 bg-zinc-700 hover:bg-zinc-600 text-zinc-200 font-bold text-center cursor-pointer">
+                    📂 IMPORT.JSON
+                    <input type="file" id="input-import" accept=".json" class="hidden">
+                </label>
+            </div>
+        </div>
+
+        <!-- Matran Lịch Trực Quan (Phong cách Trạm kiểm soát) -->
+        <div class="bg-zinc-800 p-3 border border-zinc-700 space-y-2 collapsible">
+            <button type="button" class="collapse-btn float-right text-[10px] text-zinc-400">Ẩn</button>
+            <div class="flex justify-between items-center text-xs">
+                <span class="text-zinc-400 font-bold">[MATRANA KIP]</span>
+                <span id="calendar-month-label" class="text-amber-400 font-bold"></span>
+            </div>
+            <div class="grid-matrix text-center text-[10px] font-bold text-zinc-500 pb-1">
+                <div>PN</div><div>VT</div><div>SR</div><div>CT</div><div>PT</div><div>SB</div><div>VS</div>
+            </div>
+            <div id="mini-calendar-grid" class="grid-matrix text-center"></div>
+        </div>
+
+        <!-- DashBoard Chỉ số cốt lõi -->
+        <div class="bg-zinc-800 p-3 border border-zinc-700 space-y-2 collapsible">
+            <button type="button" class="collapse-btn float-right text-[10px] text-zinc-400">Ẩn</button>
+            <div class="flex justify-between items-center">
+                <span id="stat-title" class="text-xs font-bold text-zinc-400">[SVEDENIYA / THỐNG KÊ]</span>
+                <button type="button" id="btn-open-modal" class="bg-amber-500 hover:bg-amber-400 text-zinc-950 px-3 py-1 text-xs font-black">+ ZAPIS (Thêm)</button>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2 text-xs">
+                <div class="col-span-2 bg-zinc-900 border border-amber-500/50 p-3 text-center">
+                    <p id="stat-total-cong" class="text-3xl font-black text-amber-400">0</p>
+                    <p class="text-[10px] font-bold text-zinc-400 mt-1">ITOGO SMEN (TỔNG CÔNG ĐI LÀM)</p>
+                </div>
+                
+                <div class="bg-zinc-900 border border-zinc-700 p-2 text-center">
+                    <p id="stat-ca1" class="text-base font-bold text-amber-300">0</p>
+                    <p class="text-[10px] text-zinc-500">Smena 1 (Ca 1)</p>
+                </div>
+                <div class="bg-zinc-900 border border-zinc-700 p-2 text-center">
+                    <p id="stat-ca2" class="text-base font-bold text-blue-300">0</p>
+                    <p class="text-[10px] text-zinc-500">Smena 2 (Ca 2)</p>
+                </div>
+                <div class="bg-zinc-900 border border-zinc-700 p-2 text-center">
+                    <p id="stat-ca3" class="text-base font-bold text-purple-300">0</p>
+                    <p class="text-[10px] text-zinc-500">Smena 3 (Ca 3)</p>
+                </div>
+                <div class="bg-zinc-900 border border-zinc-700 p-2 text-center">
+                    <p id="stat-half" class="text-base font-bold text-zinc-300">0</p>
+                    <p class="text-[10px] text-zinc-500">0.5 Smena (1/2 Ca)</p>
+                </div>
+                <div class="bg-zinc-900 border border-zinc-700 p-2 text-center">
+                    <p id="stat-hc" class="text-base font-bold text-emerald-300">0</p>
+                    <p class="text-[10px] text-zinc-500">Ofis (Hành chính)</p>
+                </div>
+                <div class="bg-zinc-900 border border-zinc-700 p-2 text-center">
+                    <p id="stat-nghi" class="text-base font-bold text-zinc-500">0</p>
+                    <p class="text-[10px] text-zinc-500">Otdyh (Nghỉ)</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tài chính & Lương thực lĩnh -->
+        <div class="bg-zinc-800 p-3 border border-zinc-700 space-y-2 text-xs collapsible">
+            <button type="button" class="collapse-btn float-right text-[10px] text-zinc-400">Ẩn</button>
+            <span class="text-zinc-400 font-bold block">[RASCHET / TÀI CHÍNH]</span>
+            <div class="grid grid-cols-2 gap-2 text-center">
+                <div class="bg-zinc-900 border border-zinc-700 p-2">
+                    <p id="rice-eat" class="text-base font-bold text-emerald-400">0</p>
+                    <p class="text-[10px] text-zinc-400">Obed (Cơm - 30k)</p>
+                </div>
+                <div class="bg-zinc-900 border border-zinc-700 p-2">
+                    <p id="ot-hours" class="text-base font-bold text-indigo-400">0h</p>
+                    <p class="text-[10px] text-zinc-400">Sverhurochnye (OT)</p>
+                </div>
+                <div class="col-span-2 bg-zinc-900 border border-zinc-700 p-2 flex justify-between items-center px-3">
+                    <span class="text-zinc-400">Vyplata OT (Tiền OT lĩnh):</span>
+                    <span id="ot-money" class="font-bold text-indigo-400">0đ</span>
+                </div>
+            </div>
+            <div class="bg-emerald-600 text-zinc-950 p-3 flex justify-between items-center font-black">
+                <div>
+                    <p class="text-[10px] opacity-80 uppercase">Itogo Zarplata (Thực lĩnh)</p>
+                    <p id="estimated-salary" class="text-lg">0đ</p>
+                </div>
+                <span class="text-lg">RUB / VND</span>
+            </div>
+        </div>
+
+        <!-- Phân tích công đoạn -->
+        <div class="bg-zinc-800 border border-zinc-700 overflow-hidden text-xs collapsible">
+            <button type="button" class="collapse-btn absolute right-2 top-2 text-[10px] text-zinc-400">Ẩn</button>
+            <div class="p-2.5 bg-zinc-900 font-bold text-zinc-400 border-b border-zinc-700">[OPERATSII / CÔNG ĐOẠN]</div>
+            <table class="w-full text-left">
+                <thead class="bg-zinc-950 text-zinc-400">
+                    <tr>
+                        <th class="p-2 pl-3">#</th>
+                        <th class="p-2">Công đoạn</th>
+                        <th class="p-2 text-center">Số lần</th>
+                        <th class="p-2 pr-3 text-right">Tỷ lệ</th>
+                    </tr>
+                </thead>
+                <tbody id="summary-table-body" class="divide-y divide-zinc-700"></tbody>
+            </table>
+        </div>
+
+        <!-- Biểu đồ phân tích -->
+        <div class="bg-zinc-800 p-3 border border-zinc-700 space-y-2 collapsible">
+            <button type="button" class="collapse-btn float-right text-[10px] text-zinc-400">Ẩn</button>
+            <span class="text-zinc-400 font-bold text-xs block">[GRAFIK / BIỂU ĐỒ]</span>
+            <div class="relative w-full h-48">
+                <canvas id="processChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Chi tiết bản ghi -->
+        <div class="bg-zinc-800 border border-zinc-700 overflow-hidden text-xs collapsible">
+            <button type="button" class="collapse-btn absolute right-2 top-2 text-[10px] text-zinc-400">Ẩn</button>
+            <div class="p-2.5 bg-zinc-900 font-bold text-zinc-400 border-b border-zinc-700 flex justify-between items-center">
+                <span>[DETALI / CHI TIẾT]</span>
+                <button type="button" id="btn-clear-all" class="text-red-400 font-bold hover:underline">Ochistit (Xóa tab)</button>
+            </div>
+            
+            <div class="p-2 bg-zinc-900/50 border-b border-zinc-700 grid grid-cols-2 gap-2">
+                <select id="detail-filter-shift" class="w-full px-2 py-1 bg-zinc-900 border border-zinc-700 text-zinc-200">
+                    <option value="all">Vse smeny (Tất cả ca)</option>
+                    <option value="Ca 1">Ca 1</option>
+                    <option value="Ca 2">Ca 2</option>
+                    <option value="Ca 3">Ca 3</option>
+                    <option value="Hành chính">Hành chính</option>
+                    <option value="1/2 Ca">1/2 Ca</option>
+                    <option value="Nghỉ">Nghỉ</option>
+                </select>
+                <input type="text" id="detail-search-keyword" placeholder="Poisk (Tìm kiếm)..." class="w-full px-2 py-1 bg-zinc-900 border border-zinc-700 text-zinc-200">
+            </div>
+
+            <div id="detail-container" class="divide-y divide-zinc-700"></div>
+        </div>
+    </div>
+
+    <!-- Modal Form -->
+    <div id="attendance-modal" class="fixed inset-0 bg-black/80 hidden items-center justify-center p-3 z-50 text-xs">
+        <div class="bg-zinc-900 border border-zinc-700 max-w-md w-full p-4 space-y-3">
+            <div class="flex justify-between items-center border-b border-zinc-700 pb-2">
+                <h3 id="modal-title" class="font-bold text-zinc-200">Dobavit zapis (Thêm bản ghi)</h3>
+                <button type="button" id="btn-close-modal" class="text-zinc-400 font-bold text-lg px-2">&times;</button>
+            </div>
+
+            <form id="record-form" class="space-y-3">
+                <input type="hidden" id="edit-record-id" value="">
+                
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-zinc-400 mb-1">Data (Ngày)</label>
+                        <input type="date" id="input-date" class="w-full px-2.5 py-1.5 bg-zinc-800 border border-zinc-700 text-zinc-100">
+                    </div>
+                    <div>
+                        <label class="block text-zinc-400 mb-1">Smena (Ca làm)</label>
+                        <select id="input-shift" class="w-full px-2.5 py-1.5 bg-zinc-800 border border-zinc-700 text-zinc-100">
+                            <option value="Ca 1">Ca 1</option>
+                            <option value="Ca 2">Ca 2</option>
+                            <option value="Ca 3">Ca 3</option>
+                            <option value="Hành chính">Hành chính</option>
+                            <option value="1/2 Ca">1/2 Ca</option>
+                            <option value="Nghỉ">Nghỉ</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-zinc-400 mb-1">Operatsiya (Công đoạn)</label>
+                    <input type="text" id="input-process" placeholder="Nhập tên công đoạn..." class="w-full px-2.5 py-1.5 bg-zinc-800 border border-zinc-700 text-zinc-100 mb-1">
+                    <div class="flex gap-1">
+                        <button type="button" class="btn-quick-proc px-2 py-0.5 bg-zinc-800 border border-zinc-700 text-zinc-300" data-val="Cán Tinh lá">Cán Tinh lá</button>
+                        <button type="button" class="btn-quick-proc px-2 py-0.5 bg-zinc-800 border border-zinc-700 text-zinc-300" data-val="Cắt Ống">Cắt Ống</button>
+                        <button type="button" class="btn-quick-proc px-2 py-0.5 bg-zinc-800 border border-zinc-700 text-zinc-300" data-val="Vệ sinh ống">Vệ sinh ống</button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2 bg-zinc-800/50 p-2 border border-zinc-700">
+                    <div>
+                        <label class="block text-zinc-400 mb-1">Chasy OT (Giờ)</label>
+                        <input type="number" id="input-ot-hours" step="0.5" min="0" value="0" class="w-full px-2 py-1 bg-zinc-800 border border-zinc-700 text-zinc-100 font-bold">
+                    </div>
+                    <div>
+                        <label class="block text-zinc-400 mb-1">Oplata OT (Tính tiền?)</label>
+                        <select id="input-ot-status" class="w-full px-2 py-1 bg-zinc-800 border border-zinc-700 text-zinc-100 font-bold">
+                            <option value="paid">Da (Được lĩnh)</option>
+                            <option value="unpaid">Net (Không)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-zinc-400 mb-1">Obed (Cơm)</label>
+                        <select id="input-rice" class="w-full px-2.5 py-1.5 bg-zinc-800 border border-zinc-700 text-zinc-100">
+                            <option value="yes">Da (Có - 30k)</option>
+                            <option value="no">Net (Không)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-zinc-400 mb-1">Primechanie (Ghi chú)</label>
+                        <input type="text" id="input-note" placeholder="Sự cố..." class="w-full px-2.5 py-1.5 bg-zinc-800 border border-zinc-700 text-zinc-100">
+                    </div>
+                </div>
+
+                <div class="flex justify-end gap-2 pt-2 border-t border-zinc-700">
+                    <button type="button" id="btn-cancel-modal" class="px-3 py-1.5 bg-zinc-800 text-zinc-300">Otmena (Hủy)</button>
+                    <button type="submit" class="px-3 py-1.5 bg-amber-500 text-zinc-950 font-bold">Sokhranit (Lưu)</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Confirm Modal -->
+    <div id="confirm-modal" class="fixed inset-0 bg-black/80 hidden items-center justify-center p-4 z-50 text-xs">
+        <div class="bg-zinc-900 border border-zinc-700 max-w-xs w-full p-4 text-center space-y-3">
+            <p class="font-bold text-zinc-200">Podtverdit udalenie (Xóa sạch tab?)</p>
+            <div class="grid grid-cols-2 gap-2">
+                <button type="button" id="btn-cancel-delete" class="py-2 bg-zinc-800 text-zinc-300">Net</button>
+                <button type="button" id="btn-confirm-delete" class="py-2 bg-red-600 text-zinc-100 font-bold">Da</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentTab = 1;
+        let allData = JSON.parse(localStorage.getItem('nga_tabs_data_v1')) || { 1: [], 2: [], 3: [], 4: [], 5: [] };
+        let allNames = JSON.parse(localStorage.getItem('nga_tabs_names_v1')) || { 1: "Hieu", 2: "Worker 2", 3: "Worker 3", 4: "Worker 4", 5: "Worker 5" };
+        let myChart = null;
+
+        const PROCESS_LIST = [
+            "Phụ trách-KT-TK","Ca SX","Trưởng Ca","Bốc NL+Vật tư","Khử nước","Keo hóa",
+            "Nghiền-GT1","Sấy-Bơm NN","B.Ôn-GT 2","KSCL","ĐH T.Tâm",
+            "Cán Tinh lá","Cắt Ống","Vệ sinh ống"
+        ];
+        const WAGE_KEYS = { "Ca 1":"wage-ca1","Ca 2":"wage-ca2","Ca 3":"wage-ca3","Hành chính":"wage-hc","1/2 Ca":"wage-half" };
+        const WAGE_DEFAULTS = {"wage-ca1":300000,"wage-ca2":300000,"wage-ca3":300000,"wage-hc":300000,"wage-half":150000};
+
+        function initExtras() {
+            const list = document.getElementById('quick-process-list');
+            if (list) {
+                list.innerHTML = PROCESS_LIST.map(p => `<button type="button" class="btn-quick-proc px-2 py-1 bg-zinc-800 border border-zinc-700 text-zinc-300 text-[10px] text-left rounded" data-val="${p.replace(/"/g,'&quot;')}">${p}</button>`).join('');
+                list.querySelectorAll('.btn-quick-proc').forEach(btn => btn.addEventListener('click', () => {
+                    document.getElementById('input-process').value = btn.dataset.val;
+                }));
+            }
+            Object.entries(WAGE_DEFAULTS).forEach(([id,val]) => {
+                const el = document.getElementById(id);
+                if (el) el.value = localStorage.getItem('pcru_'+id) ?? val;
+                el?.addEventListener('input', () => { localStorage.setItem('pcru_'+id, el.value); renderAll(); });
+            });
+            document.querySelectorAll('.theme-btn').forEach(btn => btn.addEventListener('click', () => {
+                const theme = btn.dataset.theme;
+                document.body.className = document.body.className.replace(/\btheme-\S+/g,'').trim();
+                if (theme !== 'dark') document.body.classList.add('theme-'+theme);
+                localStorage.setItem('pcru_theme', theme);
+            }));
+            const savedTheme = localStorage.getItem('pcru_theme');
+            if (savedTheme && savedTheme !== 'dark') document.body.classList.add('theme-'+savedTheme);
+
+            document.querySelectorAll('.collapsible').forEach(box => {
+                const b = box.querySelector('.collapse-btn');
+                if (!b) return;
+                b.addEventListener('click', () => {
+                    box.classList.toggle('collapsed');
+                    b.textContent = box.classList.contains('collapsed') ? 'Hiện' : 'Ẩn';
+                });
+            });
+        }
+
+        function getWageForShift(shift) {
+            const id = WAGE_KEYS[shift];
+            return id ? (parseFloat(document.getElementById(id)?.value) || 0) : (parseFloat(document.getElementById('input-wage-rate')?.value) || 0);
+        }
+
+
+        const now = new Date();
+        const defaultMonthStr = now.toISOString().slice(0, 7);
+        const filterMonthInput = document.getElementById('filter-month');
+        filterMonthInput.value = defaultMonthStr;
+        filterMonthInput.addEventListener('change', renderAll);
+        document.getElementById('input-wage-rate').addEventListener('input', renderAll);
+
+        const nameInput = document.getElementById('filter-name');
+        nameInput.value = allNames[currentTab] || "";
+        nameInput.addEventListener('input', function() {
+            allNames[currentTab] = nameInput.value;
+            localStorage.setItem('nga_tabs_names_v1', JSON.stringify(allNames));
+        });
+
+        document.getElementById('detail-filter-shift').addEventListener('change', renderDetailList);
+        document.getElementById('detail-search-keyword').addEventListener('input', renderDetailList);
+
+        document.getElementById('btn-export').addEventListener('click', function() {
+            const dataToExport = { data: allData, names: allNames };
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(dataToExport));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `uchet_backup_${new Date().toISOString().slice(0,10)}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        });
+
+        document.getElementById('input-import').addEventListener('change', function(e) {
+            const fileReader = new FileReader();
+            if(e.target.files[0]) {
+                fileReader.readAsText(e.target.files[0], "UTF-8");
+                fileReader.onload = function(event) {
+                    try {
+                        const parsed = JSON.parse(event.target.result);
+                        if (parsed.data) { allData = parsed.data; allNames = parsed.names || allNames; }
+                        else { allData = parsed; }
+                        localStorage.setItem('nga_tabs_data_v1', JSON.stringify(allData));
+                        localStorage.setItem('nga_tabs_names_v1', JSON.stringify(allNames));
+                        nameInput.value = allNames[currentTab] || "";
+                        renderAll();
+                        alert("Uspekh (Khôi phục thành công)!");
+                    } catch(err) { alert("Oshibka (Lỗi file)!"); }
+                };
+            }
+        });
+
+        for (let i = 1; i <= 5; i++) {
+            document.getElementById(`tab-btn-${i}`).addEventListener('click', function() {
+                currentTab = i;
+                for (let j = 1; j <= 5; j++) {
+                    const btn = document.getElementById(`tab-btn-${j}`);
+                    if (j === i) { btn.className = "w-8 h-8 font-bold text-xs bg-amber-500 text-zinc-950"; }
+                    else { btn.className = "w-8 h-8 font-bold text-xs bg-zinc-700 text-zinc-300"; }
+                }
+                nameInput.value = allNames[currentTab] || "";
+                renderAll();
+            });
+        }
+
+        document.getElementById('btn-open-modal').addEventListener('click', function() {
+            document.getElementById('modal-title').innerText = "Dobavit zapis";
+            document.getElementById('edit-record-id').value = "";
+            document.getElementById('attendance-modal').classList.remove('hidden');
+            document.getElementById('attendance-modal').classList.add('flex');
+            document.getElementById('input-date').value = new Date().toISOString().split('T')[0];
+            document.getElementById('input-ot-hours').value = 0;
+            document.getElementById('input-ot-status').value = 'paid';
+        });
+
+        function openEditModal(recordId) {
+            const records = allData[currentTab] || [];
+            const r = records.find(item => item.id == recordId);
+            if (!r) return;
+            document.getElementById('modal-title').innerText = "Izmenit zapis";
+            document.getElementById('edit-record-id').value = r.id;
+            document.getElementById('input-date').value = r.date || new Date().toISOString().split('T')[0];
+            document.getElementById('input-shift').value = r.shift || "Ca 1";
+            document.getElementById('input-process').value = r.process || "";
+            document.getElementById('input-ot-hours').value = r.otHours || 0;
+            document.getElementById('input-ot-status').value = r.otStatus || 'paid';
+            document.getElementById('input-rice').value = r.rice || "yes";
+            document.getElementById('input-note').value = r.note || "";
+            document.getElementById('attendance-modal').classList.remove('hidden');
+            document.getElementById('attendance-modal').classList.add('flex');
+        }
+
+        function openNewModalForDate(dateStr) {
+            document.getElementById('modal-title').innerText = "Dobavit zapis";
+            document.getElementById('edit-record-id').value = "";
+            document.getElementById('input-date').value = dateStr;
+            document.getElementById('input-shift').value = "Ca 1";
+            document.getElementById('input-process').value = "";
+            document.getElementById('input-ot-hours').value = 0;
+            document.getElementById('input-ot-status').value = 'paid';
+            document.getElementById('input-rice').value = "yes";
+            document.getElementById('input-note').value = "";
+            document.getElementById('attendance-modal').classList.remove('hidden');
+            document.getElementById('attendance-modal').classList.add('flex');
+        }
+
+        function closeModalFunc() {
+            document.getElementById('attendance-modal').classList.add('hidden');
+            document.getElementById('attendance-modal').classList.remove('flex');
+        }
+
+        document.getElementById('btn-close-modal').addEventListener('click', closeModalFunc);
+        document.getElementById('btn-cancel-modal').addEventListener('click', closeModalFunc);
+
+        document.querySelectorAll('.btn-quick-proc').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.getElementById('input-process').value = this.getAttribute('data-val');
+            });
+        });
+
+        document.getElementById('record-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            let records = allData[currentTab] || [];
+            const editId = document.getElementById('edit-record-id').value;
+            const otH = parseFloat(document.getElementById('input-ot-hours').value) || 0;
+            const otSt = document.getElementById('input-ot-status').value;
+            const proc = document.getElementById('input-process').value.trim();
+
+            if (!proc) { alert("Vvedi operatsiyu (Nhập công đoạn)!"); return; }
+
+            if (editId) {
+                const idx = records.findIndex(item => item.id == editId);
+                if (idx !== -1) {
+                    records[idx].date = document.getElementById('input-date').value;
+                    records[idx].shift = document.getElementById('input-shift').value;
+                    records[idx].process = proc;
+                    records[idx].otHours = otH;
+                    records[idx].otStatus = otSt;
+                    records[idx].rice = document.getElementById('input-rice').value;
+                    records[idx].note = document.getElementById('input-note').value.trim();
+                }
+            } else {
+                records.push({
+                    id: Date.now(),
+                    date: document.getElementById('input-date').value,
+                    shift: document.getElementById('input-shift').value,
+                    process: proc,
+                    otHours: otH,
+                    otStatus: otSt,
+                    rice: document.getElementById('input-rice').value,
+                    note: document.getElementById('input-note').value.trim()
+                });
+            }
+
+            allData[currentTab] = records;
+            localStorage.setItem('nga_tabs_data_v1', JSON.stringify(allData));
+            renderAll();
+            closeModalFunc();
+        });
+
+        const confirmModal = document.getElementById('confirm-modal');
+        document.getElementById('btn-clear-all').addEventListener('click', function() {
+            confirmModal.classList.remove('hidden');
+            confirmModal.classList.add('flex');
+        });
+        document.getElementById('btn-cancel-delete').addEventListener('click', function() {
+            confirmModal.classList.add('hidden');
+            confirmModal.classList.remove('flex');
+        });
+        document.getElementById('btn-confirm-delete').addEventListener('click', function() {
+            allData[currentTab] = [];
+            localStorage.setItem('nga_tabs_data_v1', JSON.stringify(allData));
+            renderAll();
+            confirmModal.classList.add('hidden');
+            confirmModal.classList.remove('flex');
+        });
+
+        function deleteRecord(id) {
+            allData[currentTab] = (allData[currentTab] || []).filter(item => item.id != id);
+            localStorage.setItem('nga_tabs_data_v1', JSON.stringify(allData));
+            renderAll();
+        }
+
+        function renderMiniCalendar(selectedMonth, records) {
+            const gridEl = document.getElementById('mini-calendar-grid');
+            const labelEl = document.getElementById('calendar-month-label');
+            gridEl.innerHTML = "";
+
+            const [yearStr, monthStr] = selectedMonth.split('-');
+            const year = parseInt(yearStr);
+            const month = parseInt(monthStr);
+            labelEl.innerText = `${month}.${year}`;
+
+            let recordMap = {};
+            records.forEach(r => {
+                if (r.date) {
+                    if (!recordMap[r.date]) recordMap[r.date] = [];
+                    recordMap[r.date].push(r);
+                }
+            });
+
+            let firstDayIndex = new Date(year, month - 1, 1).getDay();
+            firstDayIndex = (firstDayIndex === 0) ? 6 : firstDayIndex - 1;
+            let totalDays = new Date(year, month, 0).getDate();
+
+            for (let i = 0; i < firstDayIndex; i++) {
+                gridEl.appendChild(document.createElement('div'));
+            }
+
+            for (let day = 1; day <= totalDays; day++) {
+                let dStr = String(day).padStart(2, '0');
+                let mStr = String(month).padStart(2, '0');
+                let fullDateStr = `${year}-${mStr}-${dStr}`;
+
+                let cellDiv = document.createElement('div');
+                cellDiv.className = "h-8 bg-zinc-900 border border-zinc-700 flex items-center justify-center text-[11px] font-bold text-zinc-300 cursor-pointer hover:bg-zinc-700";
+                cellDiv.innerText = day;
+
+                let dayRecords = recordMap[fullDateStr];
+                if (dayRecords && dayRecords.length > 0) {
+                    let s = dayRecords[0].shift;
+                    if (s.includes("Ca 1")) cellDiv.className = "h-8 shift-ca1 flex items-center justify-center text-[11px] font-bold cursor-pointer";
+                    else if (s.includes("Ca 2")) cellDiv.className = "h-8 shift-ca2 flex items-center justify-center text-[11px] font-bold cursor-pointer";
+                    else if (s.includes("Ca 3")) cellDiv.className = "h-8 shift-ca3 flex items-center justify-center text-[11px] font-bold cursor-pointer";
+                    else if (s.includes("Hành chính")) cellDiv.className = "h-8 shift-hc flex items-center justify-center text-[11px] font-bold cursor-pointer";
+                    else if (s.includes("Nghỉ")) cellDiv.className = "h-8 bg-zinc-700 border border-zinc-600 text-zinc-500 flex items-center justify-center text-[11px] font-bold cursor-pointer";
+                }
+
+                if (fullDateStr === new Date().toISOString().split('T')[0]) {
+                    cellDiv.classList.add('ring-1', 'ring-amber-400');
+                }
+
+                cellDiv.addEventListener('click', function() {
+                    if (dayRecords && dayRecords.length > 0) openEditModal(dayRecords[0].id);
+                    else openNewModalForDate(fullDateStr);
+                });
+
+                gridEl.appendChild(cellDiv);
+            }
+        }
+
+        function renderAll() {
+            const selectedMonth = filterMonthInput.value;
+            const wageRate = parseFloat(document.getElementById('input-wage-rate').value) || 0;
+            const rawRecords = allData[currentTab] || [];
+            const records = rawRecords.filter(r => r.date && r.date.startsWith(selectedMonth));
+
+            renderMiniCalendar(selectedMonth, rawRecords);
+
+            let c1 = 0, c2 = 0, c3 = 0, half = 0, hc = 0, nghi = 0, totalCong = 0;
+            let eatCount = 0, totalOtPaid = 0, totalOtUnpaid = 0;
+
+            records.forEach(r => {
+                if (r.shift.includes("Ca 1")) { c1++; totalCong += 1.0; }
+                else if (r.shift.includes("Ca 2")) { c2++; totalCong += 1.0; }
+                else if (r.shift.includes("Ca 3")) { c3++; totalCong += 1.0; }
+                else if (r.shift.includes("1/2 Ca")) { half++; totalCong += 0.5; }
+                else if (r.shift.includes("Hành chính")) { hc++; totalCong += 1.0; }
+                else if (r.shift.includes("Nghỉ")) { nghi++; }
+
+                if (r.rice === 'yes') eatCount++;
+                let otH = parseFloat(r.otHours) || 0;
+                if (r.otStatus === 'unpaid') totalOtUnpaid += otH;
+                else totalOtPaid += otH;
+            });
+
+            document.getElementById('stat-total-cong').innerText = totalCong;
+            document.getElementById('stat-ca1').innerText = c1;
+            document.getElementById('stat-ca2').innerText = c2;
+            document.getElementById('stat-ca3').innerText = c3;
+            document.getElementById('stat-half').innerText = half;
+            document.getElementById('stat-hc').innerText = hc;
+            document.getElementById('stat-nghi').innerText = nghi;
+            document.getElementById('rice-eat').innerText = eatCount;
+
+            const totalRiceMoney = eatCount * 30000;
+            const hourlyRate = wageRate / 8;
+            const totalOtMoney = totalOtPaid * hourlyRate;
+
+            document.getElementById('ot-hours').innerText = (totalOtPaid + totalOtUnpaid) + "h";
+            document.getElementById('ot-money').innerText = totalOtMoney.toLocaleString() + "đ";
+
+            let baseSalary = 0;
+            records.forEach(r => {
+                if (r.shift.includes("Ca 1")) baseSalary += getWageForShift("Ca 1");
+                else if (r.shift.includes("Ca 2")) baseSalary += getWageForShift("Ca 2");
+                else if (r.shift.includes("Ca 3")) baseSalary += getWageForShift("Ca 3");
+                else if (r.shift.includes("Hành chính")) baseSalary += getWageForShift("Hành chính");
+                else if (r.shift.includes("1/2 Ca")) baseSalary += getWageForShift("1/2 Ca");
+            });
+            const netSalary = baseSalary + totalOtMoney - totalRiceMoney;
+            document.getElementById('estimated-salary').innerText = netSalary.toLocaleString() + "đ";
+
+            let summaryMap = {};
+            records.forEach(r => { summaryMap[r.process] = (summaryMap[r.process] || 0) + 1; });
+
+            let sumBody = document.getElementById('summary-table-body');
+            sumBody.innerHTML = "";
+            let keys = Object.keys(summaryMap);
+            let totalCount = records.length;
+
+            if (keys.length === 0) {
+                sumBody.innerHTML = `<tr><td colspan="4" class="p-2.5 text-center text-zinc-500">Net dannykh (Trống)</td></tr>`;
+            } else {
+                keys.forEach((k, idx) => {
+                    let count = summaryMap[k];
+                    let percent = totalCount > 0 ? ((count / totalCount) * 100).toFixed(1) : 0;
+                    let tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td class="p-2 pl-3 text-zinc-500">${idx+1}</td>
+                        <td class="p-2 font-bold text-zinc-200">${k}</td>
+                        <td class="p-2 text-center font-bold text-amber-400">${count}</td>
+                        <td class="p-2 pr-3 text-right text-zinc-400">${percent}%</td>
+                    `;
+                    sumBody.appendChild(tr);
+                });
+            }
+
+            updateChart(keys, keys.map(k => summaryMap[k]));
+            renderDetailList();
+        }
+
+        function renderDetailList() {
+            const selectedMonth = filterMonthInput.value;
+            let records = (allData[currentTab] || []).filter(r => r.date && r.date.startsWith(selectedMonth));
+            const shiftFilter = document.getElementById('detail-filter-shift').value;
+            const keyword = document.getElementById('detail-search-keyword').value.toLowerCase().trim();
+
+            if (shiftFilter !== 'all') records = records.filter(r => r.shift.includes(shiftFilter));
+            if (keyword) records = records.filter(r => (r.process && r.process.toLowerCase().includes(keyword)) || (r.note && r.note.toLowerCase().includes(keyword)));
+
+            let container = document.getElementById('detail-container');
+            container.innerHTML = "";
+
+            if (records.length === 0) {
+                container.innerHTML = `<div class="p-3 text-center text-zinc-500">Poisk ne dal rezultatov</div>`;
+                return;
+            }
+
+            records.forEach(r => {
+                let dParts = r.date.split('-');
+                let dStr = dParts.length === 3 ? `${dParts[2]}.${dParts[1]}.${dParts[0]}` : r.date;
+                let otH = parseFloat(r.otHours) || 0;
+                let otBadge = otH > 0 ? `<span class="text-[10px] px-1 bg-zinc-700 text-indigo-300">OT: ${otH}h</span>` : '';
+
+                let div = document.createElement('div');
+                div.className = "p-2.5 flex items-center justify-between hover:bg-zinc-900";
+                div.innerHTML = `
+                    <div class="space-y-0.5">
+                        <div class="flex items-center gap-2">
+                            <span class="text-zinc-500 font-mono">${dStr}</span>
+                            <span class="px-1.5 py-0.2 bg-zinc-700 text-amber-300 text-[10px] font-bold">${r.shift}</span>
+                            <span class="text-zinc-100 font-bold">${r.process}</span>
+                        </div>
+                        <div class="flex gap-2 text-[10px] text-zinc-400">
+                            ${otBadge}
+                            <span>Obed: ${r.rice === 'yes' ? 'Da' : 'Net'}</span>
+                            ${r.note ? `<span>Note: ${r.note}</span>` : ''}
+                        </div>
+                    </div>
+                    <div class="flex gap-1">
+                        <button type="button" class="px-2 py-1 bg-zinc-700 hover:bg-zinc-600 text-zinc-200 text-[10px]" onclick="openEditModal(${r.id})">Izmenit</button>
+                        <button type="button" class="px-2 py-1 bg-red-900/50 hover:bg-red-900 text-red-300 text-[10px]" onclick="deleteRecord(${r.id})">Udalit</button>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function updateChart(labels, data) {
+            const ctx = document.getElementById('processChart').getContext('2d');
+            if (myChart) myChart.destroy();
+            myChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: '#f59e0b',
+                        borderRadius: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { 
+                        y: { beginAtZero: true, ticks: { stepSize: 1, color: '#71717a' }, grid: { color: '#27272a' } },
+                        x: { ticks: { color: '#71717a' }, grid: { color: '#27272a' } }
+                    }
+                }
+            });
+        }
+
+        initExtras();
+        renderAll();
+    </script>
+</body>
+</html>
